@@ -3,10 +3,10 @@ const { broadcast } = require('./webSocketServer');
 const Estados = require('./estadosModel');
 
 // Umbrales de temperatura
-const coldtemp = -3;  // Menor o igual a 5 °C = Frío
-const idealtemp = 0;   // Entre 0°C y 5°C = Normal
-const hottemp = 5;     // Mayor o igual a 5°C = Calor
-
+const coldtemp = -3;    // Menor o igual a -3 °C = Frío
+const idealtemp = 0;    // Entre 0°C y 5°C = Normal
+const hottemp = 5;      // Mayor o igual a 5°C = Calor
+const extremeHotTemp = 10;  // Mayor o igual a 10°C = Extremadamente caluroso
 // Rango de humedad ideal para los pingüinos
 const humidityLow = 30;  // Menor o igual a 30% = Incomodo
 const humidityIdeal = 60; // Entre 30% y 60% = Ideal
@@ -24,73 +24,63 @@ const subscribeToTopic = () => {
 
 const determinarEstado = (temperatura, humedad) => {
     let estado;
-    
+
     if (temperatura <= coldtemp) {
         estado = 'frio';
     } else if (temperatura > coldtemp && temperatura < idealtemp) {
         estado = 'normal'; // Estado normal en temperaturas cercanas a 0°C
-    } else if (temperatura >= idealtemp && temperatura <= hottemp) {
-        if (humedad >= humidityLow && humedad <= humidityIdeal) {
-            estado = 'normal';
-        } else if (humedad < humidityLow) {
-            estado = 'incomodo';
-        } else {
-            estado = 'incomodo'; // Si la humedad es demasiado alta
-        }
+    } else if (temperatura >= idealtemp && temperatura < hottemp) {
+        estado = (humedad >= humidityLow && humedad <= humidityIdeal) ? 'normal' : 'incomodo';
+    } else if (temperatura >= hottemp && temperatura < extremeHotTemp) {
+        estado = (humedad >= humidityLow && humedad <= humidityIdeal) ? 'calor' : 'incomodo';
     } else {
-        if (humedad < humidityLow) {
-            estado = 'incomodo';
-        } else if (humedad >= humidityLow && humedad <= humidityIdeal) {
-            estado = 'calor';
-        } else {
-            estado = 'incomodo'; // Humedad demasiado alta
-        }
+        estado = 'extremadamente caluroso';
     }
-    
+
     return estado;
 };
 
 const procesarMensaje = async (msgString) => {
     console.log("Mensaje recibido:", msgString);
-    
-    try {
-        // Parsear el mensaje JSON
-        const data = JSON.parse(msgString);
-        const temperatura = parseFloat(data.temperatura); // Extraer la temperatura
-        const humedad = parseFloat(data.humedad); // Extraer la humedad
-        const luz = data.luz; // Extraer la luz
 
-        if (isNaN(temperatura) || isNaN(humedad)) {
+    try {
+        const data = JSON.parse(msgString);
+        const temperature = parseFloat(data.temperature);
+        const humidity = parseFloat(data.humidity);
+        const ldr = parseFloat(data.ldr);
+        const readTime = data.time;
+        const nivelVida = 80;
+
+        if (isNaN(temperature) || isNaN(humidity)) {
             console.error(`Mensaje recibido no es un número válido: '${msgString}'`);
             return;
         }
 
-        console.log(`Temperatura recibida: ${temperatura}°C, Humedad recibida: ${humedad}%`);
 
-        // Determinar el estado de la temperatura y la humedad
-        const estado = determinarEstado(temperatura, humedad);
+        const estado = determinarEstado(temperature, humidity);
+        console.log(`El estado es: ${estado}`);
 
+        // Ajustar el ventilador
+        let ventilador = false;
+        if (estado === 'calor' || estado === 'extremadamente caluroso') {
+            ventilador = true;
+        }
+        console.log('Ventilador:', ventilador);
         // Publicar el estado en el broker MQTT
         client.publish('estado', `El estado es: ${estado}`);
-        console.log(`Estado publicado: ${estado}`);
+
 
         // Almacenar en la base de datos
-        const nuevosEstados = new Estados({ temperatura, humedad, luz, estado });
-        
+        const nuevosEstados = new Estados({ temperature, humidity, ldr, estado, ventilador, readTime, nivelVida });
+
         try {
             await nuevosEstados.save();
             console.log('Datos guardados en la base de datos:', nuevosEstados);
 
-            // Publicar en el tema test25
-            client.publish('test25', JSON.stringify(nuevosEstados));
-            console.log(`Datos enviados a test25: ${JSON.stringify(nuevosEstados)}`);
+            const estadosMQTT = { estado, ventilador, nivelVida };
 
-            // Enviar los datos al cliente WebSocket
-            broadcast({
-                temperatura,
-                humedad,
-                estado
-            });
+            client.publish('test25', JSON.stringify(estadosMQTT));
+            console.log("Datos enviados a MQTT", estadosMQTT);
         } catch (error) {
             console.error('Error al almacenar la temperatura en la base de datos:', error);
         }
@@ -98,7 +88,6 @@ const procesarMensaje = async (msgString) => {
         console.error(`Error al parsear el mensaje: ${msgString}, ${error}`);
     }
 };
-
 const initMqttClient = () => {
     client.on('connect', () => {
         subscribeToTopic();

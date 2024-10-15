@@ -1,11 +1,15 @@
 const mongoose = require('mongoose');
 
 const estadosSchema = new mongoose.Schema({
-    temperatura: { type: Number, required: true }, // Temperatura
-    humedad: { type: Number, required: true }, // Humedad
-    luz: { type: String, required: true },
+    temperature: { type: Number, required: true }, // Temperatura
+    humidity: { type: Number, required: true }, // Humedad
+    ldr: { type: Number, required: true },
     estado: { type: String, required: true },
-    fecha: { type: Date, default: Date.now }  // Timestamp por defecto
+    readTime: { type: String, required: true },
+    ventilador: { type: Boolean, required: true },
+    nivelVida: { type: Number, required: true }
+ 
+    // fecha: { type: Date, default: Date.now }  // Timestamp por defecto
 });
 
 const Estados = mongoose.model('estados', estadosSchema);
