@@ -1,10 +1,10 @@
-const express = require('express');
-const { Server } = require('socket.io');
-const { createServer } = require('node:http');
-const http = require('http');
-const cors = require('cors'); // Importar el paquete cors
-const connectDB = require('./db');
-const { initMqttClient } = require('./mqttService');
+import express from 'express';
+import { Server } from 'socket.io';
+import { createServer } from 'node:http';
+import http from 'http';
+import cors from 'cors';
+import connectDB from './db.js';
+import { initMqttClient } from './mqttService.js';
 
 // Conectar a la base de datos
 connectDB();
@@ -25,7 +25,7 @@ const io = new Server(server, {
 });
 
 io.on('connection', (socket) => {
-    
+
     console.log("A user has connected!");
     socket.on('message test', (message) => {
         console.log("Mensaje recibido desde el front:", message);

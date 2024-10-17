@@ -1,4 +1,4 @@
-const mqtt = require('mqtt');
+import mqtt from 'mqtt';
 
 const client = mqtt.connect('mqtt://test.mosquitto.org');
 
@@ -10,4 +10,4 @@ client.on('error', (error) => {
     console.error('Error en la conexión MQTT:', error);
 });
 
-module.exports = client;
+export default client;

@@ -1,6 +1,6 @@
-const client = require('./mqttClient');
-const { broadcast } = require('./webSocketServer');
-const Estados = require('./estadosModel');
+import client from './mqttClient.js';
+import { broadcast } from './webSocketServer.js';
+import Estados from './estadosModel.js';
 
 // Umbrales de temperatura
 const coldtemp = -3;    // Menor o igual a -3 °C = Frío
@@ -56,7 +56,6 @@ const procesarMensaje = async (msgString) => {
             return;
         }
 
-
         const estado = determinarEstado(temperature, humidity);
         console.log(`El estado es: ${estado}`);
 
@@ -68,7 +67,6 @@ const procesarMensaje = async (msgString) => {
         console.log('Ventilador:', ventilador);
         // Publicar el estado en el broker MQTT
         client.publish('estado', `El estado es: ${estado}`);
-
 
         // Almacenar en la base de datos
         const nuevosEstados = new Estados({ temperature, humidity, ldr, estado, ventilador, readTime, nivelVida });
@@ -101,4 +99,4 @@ const initMqttClient = () => {
     });
 };
 
-module.exports = { initMqttClient };
+export { initMqttClient };

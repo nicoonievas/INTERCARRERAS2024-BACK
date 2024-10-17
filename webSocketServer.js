@@ -1,4 +1,4 @@
-const WebSocket = require('ws');
+import WebSocket from 'ws';
 
 const wss = new WebSocket.Server({ port: 2000 });
 
@@ -18,4 +18,4 @@ wss.on('connection', (ws) => {
     });
 });
 
-module.exports = { wss, broadcast };
+export { wss, broadcast };

@@ -1,4 +1,4 @@
-const mongoose = require('mongoose');
+import mongoose from 'mongoose';
 
 const estadosSchema = new mongoose.Schema({
     temperature: { type: Number, required: true }, // Temperatura
@@ -14,4 +14,4 @@ const estadosSchema = new mongoose.Schema({
 
 const Estados = mongoose.model('estados', estadosSchema);
 
-module.exports = Estados;
+export default Estados;
