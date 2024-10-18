@@ -1,13 +1,15 @@
 import mongoose from 'mongoose';
+import dotEnv from 'dotenv';
+
+dotEnv.config();
 
 const connectDB = async () => {
     try {
-        await mongoose.connect('mongodb+srv://intercarreras2024:intercarreras2024@beto2024.4a3jg.mongodb.net/?retryWrites=true&w=majority&appName=beto2024');
+        await mongoose.connect(process.env.MONGO_URI); 
         console.log('Conectado a MongoDB');
     } catch (err) {
         console.error('Error al conectar a MongoDB:', err);
-        throw err; // Lanza el error para manejarlo en otro lugar
+        throw err;
     }
-};
-
+}
 export default connectDB;
