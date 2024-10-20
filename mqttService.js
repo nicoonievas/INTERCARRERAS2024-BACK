@@ -80,10 +80,10 @@ const procesarMensaje = async (msgString) => {
             console.log("Datos enviados a MQTT", estadosMQTT);
 
             // **Enviar datos por WebSocket**
-            broadcast({
-                nuevosEstados
-            });
+            broadcast({ nuevosEstados });
+
             console.log("Datos enviados a través de WebSocket");
+            console.log(nuevosEstados);
 
         } catch (error) {
             console.error('Error al almacenar la temperatura en la base de datos:', error);
