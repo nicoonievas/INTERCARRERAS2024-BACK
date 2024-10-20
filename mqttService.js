@@ -1,16 +1,15 @@
 import client from './mqttClient.js';
-import { broadcast } from './webSocketServer.js';
+import { broadcast } from './webSocketServer.js'; // Importamos broadcast para WebSocket
 import Estados from './estadosModel.js';
 
 // Umbrales de temperatura
-const coldtemp = -3;    // Menor o igual a -3 °C = Frío
-const idealtemp = 0;    // Entre 0°C y 5°C = Normal
-const hottemp = 5;      // Mayor o igual a 5°C = Calor
-const extremeHotTemp = 10;  // Mayor o igual a 10°C = Extremadamente caluroso
-// Rango de humedad ideal para los pingüinos
-const humidityLow = 30;  // Menor o igual a 30% = Incomodo
-const humidityIdeal = 60; // Entre 30% y 60% = Ideal
-const humidityHigh = 80;  // Mayor o igual a 80% = Incomodo
+const coldtemp = -3;    
+const idealtemp = 0;    
+const hottemp = 5;      
+const extremeHotTemp = 10;  
+const humidityLow = 30;  
+const humidityIdeal = 60;
+const humidityHigh = 80;  
 
 const subscribeToTopic = () => {
     client.subscribe('test23', (err) => {
@@ -28,7 +27,7 @@ const determinarEstado = (temperatura, humedad) => {
     if (temperatura <= coldtemp) {
         estado = 'frio';
     } else if (temperatura > coldtemp && temperatura < idealtemp) {
-        estado = 'normal'; // Estado normal en temperaturas cercanas a 0°C
+        estado = 'normal';
     } else if (temperatura >= idealtemp && temperatura < hottemp) {
         estado = (humedad >= humidityLow && humedad <= humidityIdeal) ? 'normal' : 'incomodo';
     } else if (temperatura >= hottemp && temperatura < extremeHotTemp) {
@@ -59,13 +58,12 @@ const procesarMensaje = async (msgString) => {
         const estado = determinarEstado(temperature, humidity);
         console.log(`El estado es: ${estado}`);
 
-        // Ajustar el ventilador
         let ventilador = false;
         if (estado === 'calor' || estado === 'extremadamente caluroso') {
             ventilador = true;
         }
         console.log('Ventilador:', ventilador);
-        // Publicar el estado en el broker MQTT
+        
         client.publish('estado', `El estado es: ${estado}`);
 
         // Almacenar en la base de datos
@@ -77,8 +75,16 @@ const procesarMensaje = async (msgString) => {
 
             const estadosMQTT = { estado, ventilador, nivelVida };
 
+            // Publicar en MQTT
             client.publish('test25', JSON.stringify(estadosMQTT));
             console.log("Datos enviados a MQTT", estadosMQTT);
+
+            // **Enviar datos por WebSocket**
+            broadcast({
+                nuevosEstados
+            });
+            console.log("Datos enviados a través de WebSocket");
+
         } catch (error) {
             console.error('Error al almacenar la temperatura en la base de datos:', error);
         }
@@ -86,6 +92,7 @@ const procesarMensaje = async (msgString) => {
         console.error(`Error al parsear el mensaje: ${msgString}, ${error}`);
     }
 };
+
 const initMqttClient = () => {
     client.on('connect', () => {
         subscribeToTopic();

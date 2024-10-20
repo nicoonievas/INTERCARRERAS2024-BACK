@@ -9,7 +9,13 @@ const app = express();
 const PORT = 5000;
 const server = createServer(app);
 
-initSocket(server);
+
+try {
+    initSocket(server);
+    console.log('Sockets iniciados');
+} catch (error) {
+    console.error(error);
+}
 
 initMqttClient();
 
