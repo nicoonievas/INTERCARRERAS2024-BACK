@@ -8,7 +8,7 @@ const estadosSchema = new mongoose.Schema({
     readTime: { type: String, required: true },
     ventilador: { type: Boolean, required: true },
     nivelVida: { type: Number, required: true }, 
-    fecha: { type: Date, default: Date.now }  // Timestamp por defecto
+    fecha: { type: Date, default: Date.now }  
 });
 
 const Estados = mongoose.model('estados', estadosSchema);
