@@ -11,6 +11,22 @@ const humidityLow = 30;
 const humidityIdeal = 60;
 const humidityHigh = 80;  
 
+function hasBadTemp(temperature) { //tiene temperatura mala
+    return (temperature >= hottemp || temperature <= coldtemp) 
+}
+
+function hasBadHumidity(humidity) { //tiene humedad mala
+    return (humidity >= humidityHigh || humidity <= humidityLow)
+}
+
+function hasEaten() { //comio?
+    return true //TODO: implementar
+}
+
+function killPet() { //matar mascota
+    //TODO: implementar
+}
+
 const subscribeToTopic = () => {
     client.subscribe('test23', (err) => {
         if (!err) {
@@ -21,27 +37,97 @@ const subscribeToTopic = () => {
     });
 };
 
-const determinarEstado = (temperatura, humedad) => {
-    let estado;
 
-    if (temperatura <= coldtemp) {
-        estado = 'frio';
-    } else if (temperatura > coldtemp && temperatura < idealtemp) {
-        estado = 'normal';
-    } else if (temperatura >= idealtemp && temperatura < hottemp) {
-        estado = (humedad >= humidityLow && humedad <= humidityIdeal) ? 'normal' : 'incomodo';
-    } else if (temperatura >= hottemp && temperatura < extremeHotTemp) {
-        estado = (humedad >= humidityLow && humedad <= humidityIdeal) ? 'calor' : 'incomodo';
-    } else {
-        estado = 'extremadamente caluroso';
+const determinarEstado = async (temperatura, humedad, ldr, nivelVida) => {
+
+    const estadoPingüino = await Estados.findOne({ _id: 'estado-pinguino' });
+
+    if (!estadoPingüino) {
+        console.error("No se encontró el estado del pingüino en la base de datos.");
+        return { estado: 'desconocido', nivelvida: 0 };
     }
 
-    return estado;
+    let estado = estadoPingüino.estado; // Estado anterior
+    let nuevoEstado; // Variable para el nuevo estado
+
+    const esDia = ldr < ldrThreshold;
+
+    switch(estado) {
+        case 'Activo':
+            if (!hasEaten()) {
+                nuevoEstado = 'Hambriento';
+                nivelVida -= 10;
+            } else if (hasBadTemp(temperatura) || hasBadHumidity(humedad)) {
+                nuevoEstado = 'Enfermo';
+                nivelVida -= 10;
+            } else if (!hasBadTemp(temperatura) && !hasBadHumidity(humedad) && esDia) {
+                nuevoEstado = 'Feliz';
+                nivelVida += 20;
+            }
+            break;
+        case 'Feliz':
+            if (!hasEaten()) {
+                nuevoEstado = 'Hambriento';
+                nivelVida -= 10;
+            } else if (hasBadTemp(temperatura) || hasBadHumidity(humedad)) {
+                nuevoEstado = 'Enfermo';
+                nivelVida -= 10;
+            } else if (!esDia) {
+                nuevoEstado = 'Cansado';
+                nivelVida -= 10;
+            }
+            break;
+        case 'Cansado':
+            if (!hasEaten()) {
+                nuevoEstado = 'Hambriento';
+                nivelVida -= 10;
+            } else if (hasBadTemp(temperatura) || hasBadHumidity(humedad)) {
+                nuevoEstado = 'Enfermo';
+                nivelVida -= 10;
+            } else if (!hasBadTemp(temperatura) && !hasBadHumidity(humedad) && esDia) {
+                nuevoEstado = 'Feliz';
+                nivelVida += 20;
+            }
+            break;
+        case 'Hambriento':
+            if (hasEaten() && !hasBadTemp(temperatura) && !hasBadHumidity(humidity)) {
+                nuevoEstado = 'Feliz';
+                nivelVida += 20;
+            } else if (hasEaten() && (hasBadTemp(temperatura) || hasBadHumidity(humidity))) {
+                nuevoEstado = 'Activo';
+                nivelVida += 10;
+            } else if (hasBadTemp(temperatura) || hasBadHumidity(humidity)) {
+                nuevoEstado = 'Enfermo';
+                nivelVida -= 10;
+            }
+            break;
+        case 'Enfermo':
+            if (!hasBadTemp(temperatura) && !hasBadHumidity(humidity)) {
+                nuevoEstado = 'Activo';
+                nivelVida += 10;
+            }
+            break;
+    }
+
+    if (nivelVida <= 0) {
+        killPet() //TODO: completar
+    } else {
+        nivelVida = Math.max(0, Math.min(100, nivelVida));
+    }
+
+    if (nuevoEstado !== estado || estadoPingüino.nivelVida !== nivelVida) {
+        estadoPingüino.estado = nuevoEstado;
+        estadoPingüino.nivelVida = nivelVida;
+        await estadoPingüino.save();
+    }
+
+
+    return { estado: nuevoEstado, nivelvida: nivelVida };
 };
 
 const procesarMensaje = async (msgString) => {
     console.log("Mensaje recibido:", msgString);
-
+     
     try {
         const data = JSON.parse(msgString);
         const temperature = parseFloat(data.temperature);
@@ -54,7 +140,7 @@ const procesarMensaje = async (msgString) => {
             console.error(`Mensaje recibido no es un número válido: '${msgString}'`);
             return;
         }
-
+        // deberiamos devolver la promesa
         const estado = determinarEstado(temperature, humidity);
         console.log(`El estado es: ${estado}`);
 
