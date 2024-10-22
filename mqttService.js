@@ -11,6 +11,14 @@ const humidityLow = 30;
 const humidityIdeal = 60;
 const humidityHigh = 80;  
 
+const estadosId = {
+    "frio": 1,
+    "normal": 2,
+    "calor": 3,
+    "incomodo": 4,
+    "extremadamente caluroso": 5
+}
+
 const subscribeToTopic = () => {
     client.subscribe('test23', (err) => {
         if (!err) {
@@ -56,11 +64,16 @@ const procesarMensaje = async (msgString) => {
         }
 
         const estado = determinarEstado(temperature, humidity);
+
+        const estadoFinalId = estadosId[estado];
+        console.log( 'Id del estado:', estadoFinalId);
         console.log(`El estado es: ${estado}`);
 
         let ventilador = false;
+        let ventiladorId = 0;
         if (estado === 'calor' || estado === 'extremadamente caluroso') {
             ventilador = true;
+            ventiladorId = 1;
         }
         console.log('Ventilador:', ventilador);
         
@@ -73,7 +86,7 @@ const procesarMensaje = async (msgString) => {
             await nuevosEstados.save();
             console.log('Datos guardados en la base de datos:', nuevosEstados);
 
-            const estadosMQTT = { estado, ventilador, nivelVida };
+            const estadosMQTT = { estadoFinalId, estado, ventilador, ventiladorId, nivelVida };
 
             // Publicar en MQTT
             client.publish('test25', JSON.stringify(estadosMQTT));
