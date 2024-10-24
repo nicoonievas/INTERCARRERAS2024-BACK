@@ -23,16 +23,19 @@ const estadosId = {
 export const handleFeed = (data) => {
   const feedValue = data.value;
   console.log(`Recibido: Acción: Valor: ${data.value}`);
+  client.publish('test24', JSON.stringify({"alimentar": feedValue}));
 };
 
 export const handleSleep = (data) => {
   const sleepValue = data.value;
   console.log(`Recibido: Acción: Valor: ${data.value}`);
+  client.publish('test24', JSON.stringify({"dormir": sleepValue}));
 };
 
 export const handleHeal = (data) => {
   const feed = data.value;
   console.log(`Recibido: Acción: Valor: ${data.value}`);
+  client.publish('test24', JSON.stringify({"curar": feed}));
 };
 
 
@@ -46,7 +49,7 @@ const subscribeToTopic = () => {
     });
 };
 
-const determinarEstado = (temperatura, humedad) => {
+const determinarEstado = (temperatura, humedad, ldr) => {
     let estado;
 
     if (temperatura <= coldtemp) {
@@ -80,7 +83,7 @@ const procesarMensaje = async (msgString) => {
             return;
         }
 
-        const estado = determinarEstado(temperature, humidity);
+        const estado = determinarEstado(temperature, humidity, ldr);
 
         const estadoFinalId = estadosId[estado];
         console.log( 'Id del estado:', estadoFinalId);
