@@ -19,6 +19,23 @@ const estadosId = {
     "extremadamente caluroso": 5
 }
 
+// datos que vienen desde front, se guarda en cada variable
+export const handleFeed = (data) => {
+  const feedValue = data.value;
+  console.log(`Recibido: Acción: Valor: ${data.value}`);
+};
+
+export const handleSleep = (data) => {
+  const sleepValue = data.value;
+  console.log(`Recibido: Acción: Valor: ${data.value}`);
+};
+
+export const handleHeal = (data) => {
+  const feed = data.value;
+  console.log(`Recibido: Acción: Valor: ${data.value}`);
+};
+
+
 const subscribeToTopic = () => {
     client.subscribe('test23', (err) => {
         if (!err) {
