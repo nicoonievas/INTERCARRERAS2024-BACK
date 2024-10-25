@@ -2,20 +2,17 @@ import express from 'express';
 import { createServer } from 'node:http';
 import connectDB from './db.js';
 import { initMqttClient } from './mqttService.js';
-import initSocket from './sockets.js'; 
+import accionsBeto from './routes/accions.js';
+import cors from 'cors';
 
 connectDB();
 const app = express();
 const PORT = 5000;
 const server = createServer(app);
 
-
-try {
-    initSocket(server);
-    console.log('Sockets iniciados');
-} catch (error) {
-    console.error(error);
-}
+app.use(cors()); 
+app.use(express.json());
+app.use('/', accionsBeto);
 
 initMqttClient();
 

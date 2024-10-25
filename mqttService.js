@@ -11,6 +11,34 @@ const humidityLow = 30;
 const humidityIdeal = 60;
 const humidityHigh = 80;  
 
+const estadosId = {
+    "frio": 1,
+    "normal": 2,
+    "calor": 3,
+    "incomodo": 4,
+    "extremadamente caluroso": 5
+}
+
+// datos que vienen desde front, se guarda en cada variable
+export const handleFeed = (data) => {
+  const feedValue = data.value;
+  console.log(`Recibido: Acción: Valor: ${data.value}`);
+  client.publish('test24', JSON.stringify({"alimentar": feedValue}));
+};
+
+export const handleSleep = (data) => {
+  const sleepValue = data.value;
+  console.log(`Recibido: Acción: Valor: ${data.value}`);
+  client.publish('test24', JSON.stringify({"dormir": sleepValue}));
+};
+
+export const handleHeal = (data) => {
+  const feed = data.value;
+  console.log(`Recibido: Acción: Valor: ${data.value}`);
+  client.publish('test24', JSON.stringify({"curar": feed}));
+};
+
+
 function hasBadTemp(temperature) { //tiene temperatura mala
     return (temperature >= hottemp || temperature <= coldtemp) 
 }
@@ -37,6 +65,8 @@ const subscribeToTopic = () => {
     });
 };
 
+const determinarEstado = (temperatura, humedad, ldr) => {
+    let estado;
 
 const determinarEstado = async (temperatura, humedad, ldr, nivelVida) => {
 
@@ -140,13 +170,18 @@ const procesarMensaje = async (msgString) => {
             console.error(`Mensaje recibido no es un número válido: '${msgString}'`);
             return;
         }
-        // deberiamos devolver la promesa
-        const estado = determinarEstado(temperature, humidity);
+
+        const estado = determinarEstado(temperature, humidity, ldr);
+
+        const estadoFinalId = estadosId[estado];
+        console.log( 'Id del estado:', estadoFinalId);
         console.log(`El estado es: ${estado}`);
 
         let ventilador = false;
+        let ventiladorId = 0;
         if (estado === 'calor' || estado === 'extremadamente caluroso') {
             ventilador = true;
+            ventiladorId = 1;
         }
         console.log('Ventilador:', ventilador);
         
@@ -159,7 +194,7 @@ const procesarMensaje = async (msgString) => {
             await nuevosEstados.save();
             console.log('Datos guardados en la base de datos:', nuevosEstados);
 
-            const estadosMQTT = { estado, ventilador, nivelVida };
+            const estadosMQTT = { estadoFinalId, estado, ventilador, ventiladorId, nivelVida };
 
             // Publicar en MQTT
             client.publish('test25', JSON.stringify(estadosMQTT));
