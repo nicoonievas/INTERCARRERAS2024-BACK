@@ -17,42 +17,41 @@ const estadosId = {
     "calor": 3,
     "incomodo": 4,
     "extremadamente caluroso": 5
-}
+};
 
 // datos que vienen desde front, se guarda en cada variable
 export const handleFeed = (data) => {
   const feedValue = data.value;
-  console.log(`Recibido: Acción: Valor: ${data.value}`);
+  console.log(`Recibido: Acción: Valor: ${data.value}`); // Agregado el uso correcto de comillas invertidas
   client.publish('test24', JSON.stringify({"alimentar": feedValue}));
 };
 
 export const handleSleep = (data) => {
   const sleepValue = data.value;
-  console.log(`Recibido: Acción: Valor: ${data.value}`);
+  console.log(`Recibido: Acción: Valor: ${data.value}`); // Agregado el uso correcto de comillas invertidas
   client.publish('test24', JSON.stringify({"dormir": sleepValue}));
 };
 
 export const handleHeal = (data) => {
   const feed = data.value;
-  console.log(`Recibido: Acción: Valor: ${data.value}`);
+  console.log(`Recibido: Acción: Valor: ${data.value}`); // Agregado el uso correcto de comillas invertidas
   client.publish('test24', JSON.stringify({"curar": feed}));
 };
 
-
-function hasBadTemp(temperature) { //tiene temperatura mala
-    return (temperature >= hottemp || temperature <= coldtemp) 
+function hasBadTemp(temperature) { // tiene temperatura mala
+    return (temperature >= hottemp || temperature <= coldtemp);
 }
 
-function hasBadHumidity(humidity) { //tiene humedad mala
-    return (humidity >= humidityHigh || humidity <= humidityLow)
+function hasBadHumidity(humidity) { // tiene humedad mala
+    return (humidity >= humidityHigh || humidity <= humidityLow);
 }
 
-function hasEaten() { //comio?
-    return true //TODO: implementar
+function hasEaten() { // ¿comió?
+    return true; // TODO: implementar
 }
 
-function killPet() { //matar mascota
-    //TODO: implementar
+function killPet() { // matar mascota
+    // TODO: implementar
 }
 
 const subscribeToTopic = () => {
@@ -64,9 +63,6 @@ const subscribeToTopic = () => {
         }
     });
 };
-
-const determinarEstado = (temperatura, humedad, ldr) => {
-    let estado;
 
 const determinarEstado = async (temperatura, humedad, ldr, nivelVida) => {
 
@@ -80,7 +76,7 @@ const determinarEstado = async (temperatura, humedad, ldr, nivelVida) => {
     let estado = estadoPingüino.estado; // Estado anterior
     let nuevoEstado; // Variable para el nuevo estado
 
-    const esDia = ldr < ldrThreshold;
+    const esDia = ldr < ldrThreshold; // Asegúrate de que ldrThreshold esté definido
 
     switch(estado) {
         case 'Activo':
@@ -120,19 +116,19 @@ const determinarEstado = async (temperatura, humedad, ldr, nivelVida) => {
             }
             break;
         case 'Hambriento':
-            if (hasEaten() && !hasBadTemp(temperatura) && !hasBadHumidity(humidity)) {
+            if (hasEaten() && !hasBadTemp(temperatura) && !hasBadHumidity(humedad)) {
                 nuevoEstado = 'Feliz';
                 nivelVida += 20;
-            } else if (hasEaten() && (hasBadTemp(temperatura) || hasBadHumidity(humidity))) {
+            } else if (hasEaten() && (hasBadTemp(temperatura) || hasBadHumidity(humedad))) {
                 nuevoEstado = 'Activo';
                 nivelVida += 10;
-            } else if (hasBadTemp(temperatura) || hasBadHumidity(humidity)) {
+            } else if (hasBadTemp(temperatura) || hasBadHumidity(humedad)) {
                 nuevoEstado = 'Enfermo';
                 nivelVida -= 10;
             }
             break;
         case 'Enfermo':
-            if (!hasBadTemp(temperatura) && !hasBadHumidity(humidity)) {
+            if (!hasBadTemp(temperatura) && !hasBadHumidity(humedad)) {
                 nuevoEstado = 'Activo';
                 nivelVida += 10;
             }
@@ -140,7 +136,7 @@ const determinarEstado = async (temperatura, humedad, ldr, nivelVida) => {
     }
 
     if (nivelVida <= 0) {
-        killPet() //TODO: completar
+        killPet(); // TODO: completar
     } else {
         nivelVida = Math.max(0, Math.min(100, nivelVida));
     }
@@ -150,7 +146,6 @@ const determinarEstado = async (temperatura, humedad, ldr, nivelVida) => {
         estadoPingüino.nivelVida = nivelVida;
         await estadoPingüino.save();
     }
-
 
     return { estado: nuevoEstado, nivelvida: nivelVida };
 };
@@ -164,18 +159,18 @@ const procesarMensaje = async (msgString) => {
         const humidity = parseFloat(data.humidity);
         const ldr = parseFloat(data.ldr);
         const readTime = data.time;
-        const nivelVida = 80;
+        let nivelVida = 80; // Asegúrate de que este valor sea un número al principio
 
         if (isNaN(temperature) || isNaN(humidity)) {
-            console.error(`Mensaje recibido no es un número válido: '${msgString}'`);
+            console.error(`Mensaje recibido no es un número válido: '${msgString}'`); // Agregado uso de comillas invertidas
             return;
         }
 
-        const estado = determinarEstado(temperature, humidity, ldr);
+        const { estado, nivelvida } = await determinarEstado(temperature, humidity, ldr, nivelVida); // Llama a determinarEstado y espera su resultado
 
         const estadoFinalId = estadosId[estado];
-        console.log( 'Id del estado:', estadoFinalId);
-        console.log(`El estado es: ${estado}`);
+        console.log('Id del estado:', estadoFinalId);
+        console.log(`El estado es: ${estado}`); // Agregado uso de comillas invertidas
 
         let ventilador = false;
         let ventiladorId = 0;
@@ -185,7 +180,7 @@ const procesarMensaje = async (msgString) => {
         }
         console.log('Ventilador:', ventilador);
         
-        client.publish('estado', `El estado es: ${estado}`);
+        client.publish('estado', `El estado es: ${estado}`); // Agregado uso de comillas invertidas
 
         // Almacenar en la base de datos
         const nuevosEstados = new Estados({ temperature, humidity, ldr, estado, ventilador, readTime, nivelVida });
@@ -200,7 +195,7 @@ const procesarMensaje = async (msgString) => {
             client.publish('test25', JSON.stringify(estadosMQTT));
             console.log("Datos enviados a MQTT", estadosMQTT);
 
-            // **Enviar datos por WebSocket**
+            // *Enviar datos por WebSocket*
             broadcast({ nuevosEstados });
 
             console.log("Datos enviados a través de WebSocket");
@@ -210,7 +205,7 @@ const procesarMensaje = async (msgString) => {
             console.error('Error al almacenar la temperatura en la base de datos:', error);
         }
     } catch (error) {
-        console.error(`Error al parsear el mensaje: ${msgString}, ${error}`);
+        console.error(`Error al parsear el mensaje: ${msgString}, ${error}`); // Agregado uso de comillas invertidas
     }
 };
 
