@@ -39,9 +39,16 @@ const estadosId = new Map([
 ]);
 
  function resendToMQTTandWS(object, topic) {
-    const parsedObject = { ...object, estado: estadosId.get(object.estado)}
-    broadcast({ parsedObject });
-    client.publish(topic, JSON.stringify(parsedObject));
+    const parsedObjectForTopic = { 
+            nivelVida: object.nivelVida,
+            estado: estadosId.get(object.estado),
+            prenderVentilador: object.prenderVentilador,
+            apagarVentilador: object.apagarVentilador
+        }
+
+    const parsedObjectForFrontEnd = { ...object, estado: estadosId.get(object.estado)}
+    broadcast({ parsedObjectForFrontEnd });
+    client.publish(topic, JSON.stringify(parsedObjectForTopic));
  }
 
 // datos que vienen desde front, se guarda en cada variable
@@ -283,6 +290,8 @@ const determinarEstado = async (temperatura, humedad, ldr, nivelVida, isAction, 
         lifeLevel = Math.max(0, Math.min(100, lifeLevel));
     }
 
+    let finalStatus
+
     if (nuevoEstado !== lastKnownStatus || estadoPingüino.nivelVida !== lifeLevel) {
 
       const newEstado = new Estados({
@@ -298,9 +307,13 @@ const determinarEstado = async (temperatura, humedad, ldr, nivelVida, isAction, 
       await newEstado.save()
 
       console.log('New Status:', newEstado);
+
+        finalStatus = {... newEstado._doc, prenderVentilador: action === VENTILAR ? 1 : 0, apagarVentilador: action === APAGAR_VENTILADOR ? 1 : 0 }
+    } else {
+        finalStatus = {... estadoPingüino._doc, prenderVentilador: action === VENTILAR ? 1 : 0, apagarVentilador: action === APAGAR_VENTILADOR ? 1 : 0 }
     }
 
-    return { estado: nuevoEstado, nivelVida: lifeLevel, prenderVentilador: action === VENTILAR ? 1 : 0, apagarVentilador: action === APAGAR_VENTILADOR ? 1 : 0 };
+    return finalStatus;
 };
 
 const procesarMensaje = async (msgString) => {
