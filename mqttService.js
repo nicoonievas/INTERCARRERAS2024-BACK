@@ -266,7 +266,7 @@ const determinarEstado = async (temperatura, humedad, ldr, nivelVida, isAction, 
                     case CURAR: lifeLevel += 10; break
                     case VENTILAR: nuevoEstado = 'Activo'; lifeLevel += 10; break
                 }
-            } else if (!hasHotTemp()) {
+            } else if (!hasHotTemp(temperatura)) {
                 nuevoEstado = 'Activo';
                 lifeLevel += 10;
             } else if (!hasEaten()) {
@@ -310,7 +310,7 @@ const determinarEstado = async (temperatura, humedad, ldr, nivelVida, isAction, 
           nivelVida: lifeLevel
       });
     
-      await newEstado.save()
+      newEstado.save()
 
       console.log('New Status:', newEstado);
 
