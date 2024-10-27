@@ -10,36 +10,78 @@ const extremeHotTemp = 10;
 const humidityLow = 30;  
 const humidityIdeal = 60;
 const humidityHigh = 80;  
+const VENTILAR = 'ventilar';
+const ALIMENTAR = 'alimentar';
+const DORMIR = 'dormir';
+const CURAR = 'curar';
+const REVIVIR = 'revivir';
+const APAGAR_VENTILADOR = 'apagar_ventilador';
+const ESTADO_ACTIVO = 'Activo';
+const ESTADO_DORMIDO = 'Dormido';
+const ESTADO_ENFERMO = 'Enfermo';
+const ESTADO_CANSADO = 'Cansado';
+const ESTADO_FELIZ = 'Feliz';
+const ESTADO_HAMBRIENTO = 'Hambriento';
+const ESTADO_CALUROSO = 'Caluroso';
+const ESTADO_MUERTO = 'Muerto';
 
-const estadosId = {
-    "frio": 1,
-    "normal": 2,
-    "calor": 3,
-    "incomodo": 4,
-    "extremadamente caluroso": 5
-};
+
+
+const estadosId = new Map([
+  [ESTADO_ACTIVO, 1],
+  [ESTADO_DORMIDO, 2],
+  [ESTADO_ENFERMO, 3],
+  [ESTADO_CANSADO, 4],
+  [ESTADO_FELIZ, 5],
+  [ESTADO_HAMBRIENTO, 6],
+  [ESTADO_CALUROSO, 7],
+  [ESTADO_MUERTO, 8],
+]);
+
+ function resendToMQTTandWS(object, topic) {
+    const parsedObject = { ...object, estado: estadosId.get(object.estado)}
+    broadcast({ parsedObject });
+    client.publish(topic, JSON.stringify(parsedObject));
+ }
 
 // datos que vienen desde front, se guarda en cada variable
-export const handleFeed = (data) => {
-  const feedValue = data.value;
-  console.log(`Recibido: Acción: Valor: ${data.value}`); // Agregado el uso correcto de comillas invertidas
-  client.publish('test24', JSON.stringify({"alimentar": feedValue}));
+export const handleFeed = async () => {
+  const estadoObject = await determinarEstado('', '', '', '', true, ALIMENTAR)
+  resendToMQTTandWS(estadoObject, 'test24')
 };
 
-export const handleSleep = (data) => {
-  const sleepValue = data.value;
-  console.log(`Recibido: Acción: Valor: ${data.value}`); // Agregado el uso correcto de comillas invertidas
-  client.publish('test24', JSON.stringify({"dormir": sleepValue}));
+export const handleSleep = async  () => {
+    const estadoObject = await determinarEstado('', '', '', '', true, DORMIR)
+    resendToMQTTandWS(estadoObject, 'test24')
 };
 
-export const handleHeal = (data) => {
-  const feed = data.value;
-  console.log(`Recibido: Acción: Valor: ${data.value}`); // Agregado el uso correcto de comillas invertidas
-  client.publish('test24', JSON.stringify({"curar": feed}));
+export const handleHeal = async  () => {
+    const estadoObject = await determinarEstado('', '', '', '', true, CURAR)
+    resendToMQTTandWS(estadoObject, 'test24')
+};
+
+export const handleVent = async (data) => {
+    if (data.vent === true) {
+        const estadoObject = await determinarEstado('', '', '', '', true, VENTILAR)
+        resendToMQTTandWS(estadoObject, 'test24')
+    } else if (data.vent === false)  {
+        const estadoObject = await determinarEstado('', '', '', '', true, APAGAR_VENTILADOR)
+        resendToMQTTandWS(estadoObject, 'test24')
+    }
+    
+};
+
+export const handleRevive = async () => {
+    const estadoObject = await determinarEstado('', '', '', '', true, REVIVIR)
+    resendToMQTTandWS({estadoObject}, 'test24')
 };
 
 function hasBadTemp(temperature) { // tiene temperatura mala
     return (temperature >= hottemp || temperature <= coldtemp);
+}
+
+function hasHotTemp(temperature) {
+    return temperature >= hottemp
 }
 
 function hasBadHumidity(humidity) { // tiene humedad mala
@@ -48,10 +90,6 @@ function hasBadHumidity(humidity) { // tiene humedad mala
 
 function hasEaten() { // ¿comió?
     return true; // TODO: implementar
-}
-
-function killPet() { // matar mascota
-    // TODO: implementar
 }
 
 const subscribeToTopic = () => {
@@ -64,90 +102,205 @@ const subscribeToTopic = () => {
     });
 };
 
-const determinarEstado = async (temperatura, humedad, ldr, nivelVida) => {
+async function findLastPenguinStatus() {
+    try {
+        const lastStatus = await Estados.findOne({}).sort({ fecha: -1 }).exec();
+        
+        if (lastStatus) {
+            console.log('Last Status:', lastStatus);
+        } else {
+            console.log('No statuses found.');
+        }
 
-    const estadoPingüino = await Estados.findOne({ _id: 'estado-pinguino' });
+        return lastStatus
+    } catch (error) {
+        console.error('Error finding last status:', error);
+    }
+}
 
+const determinarEstado = async (temperatura, humedad, ldr, nivelVida, isAction, action) => {
+    const ldrThreshold = 650; //TODO: ajustar este valor
+    const estadoPingüino = await findLastPenguinStatus();
+    
     if (!estadoPingüino) {
         console.error("No se encontró el estado del pingüino en la base de datos.");
-        return { estado: 'desconocido', nivelvida: 0 };
+        return { estado: 'desconocido', nivelVida: 0 };
     }
 
-    let estado = estadoPingüino.estado; // Estado anterior
-    let nuevoEstado; // Variable para el nuevo estado
+    const lastKnownStatus = estadoPingüino._doc.estado;
+    let lifeLevel = estadoPingüino._doc.nivelVida;
+    let nuevoEstado = lastKnownStatus;
 
     const esDia = ldr < ldrThreshold; // Asegúrate de que ldrThreshold esté definido
 
-    switch(estado) {
+    switch(lastKnownStatus) {
         case 'Activo':
-            if (!hasEaten()) {
+            if (isAction) {
+                switch(action) {
+                    case ALIMENTAR: nuevoEstado = 'Feliz'; lifeLevel += 10; break
+                    case DORMIR: nuevoEstado = 'Dormido'; break
+                    case CURAR: lifeLevel += 10; break
+                }
+            } else if (!hasEaten()) {
                 nuevoEstado = 'Hambriento';
-                nivelVida -= 10;
+                lifeLevel -= 10;
+            } else if (hasHotTemp(temperatura)) {
+                nuevoEstado = 'Caluroso';
+                lifeLevel -= 10;
             } else if (hasBadTemp(temperatura) || hasBadHumidity(humedad)) {
                 nuevoEstado = 'Enfermo';
-                nivelVida -= 10;
+                lifeLevel -= 10;
             } else if (!hasBadTemp(temperatura) && !hasBadHumidity(humedad) && esDia) {
                 nuevoEstado = 'Feliz';
-                nivelVida += 20;
+                lifeLevel += 20;
             }
             break;
         case 'Feliz':
-            if (!hasEaten()) {
+            if (isAction) {
+                switch(action) {
+                    case ALIMENTAR: lifeLevel += 10; break
+                    case DORMIR: nuevoEstado = 'Dormido'; break
+                    case CURAR: lifeLevel += 10; break
+                }
+            } else if (!hasEaten()) {
                 nuevoEstado = 'Hambriento';
-                nivelVida -= 10;
+                lifeLevel -= 10;
+            } else if (hasHotTemp(temperatura)) {
+                nuevoEstado = 'Caluroso';
+                lifeLevel -= 10;
             } else if (hasBadTemp(temperatura) || hasBadHumidity(humedad)) {
                 nuevoEstado = 'Enfermo';
-                nivelVida -= 10;
+                lifeLevel -= 10;
             } else if (!esDia) {
                 nuevoEstado = 'Cansado';
-                nivelVida -= 10;
+                lifeLevel -= 10;
             }
             break;
         case 'Cansado':
-            if (!hasEaten()) {
+            if (isAction) {
+                switch(action) {
+                    case ALIMENTAR: nuevoEstado = 'Activo'; lifeLevel += 10; break
+                    case DORMIR: nuevoEstado = 'Dormido'; break
+                    case CURAR: lifeLevel += 10; break
+                }
+            } else if (!hasEaten()) {
                 nuevoEstado = 'Hambriento';
-                nivelVida -= 10;
+                lifeLevel -= 10;
+            } else if (hasHotTemp(temperatura)) {
+                nuevoEstado = 'Caluroso';
+                lifeLevel -= 10;
             } else if (hasBadTemp(temperatura) || hasBadHumidity(humedad)) {
                 nuevoEstado = 'Enfermo';
-                nivelVida -= 10;
+                lifeLevel -= 10;
             } else if (!hasBadTemp(temperatura) && !hasBadHumidity(humedad) && esDia) {
                 nuevoEstado = 'Feliz';
-                nivelVida += 20;
+                lifeLevel += 20;
             }
             break;
         case 'Hambriento':
-            if (hasEaten() && !hasBadTemp(temperatura) && !hasBadHumidity(humedad)) {
+            if (isAction) {
+                switch(action) {
+                    case ALIMENTAR: nuevoEstado = 'Feliz'; lifeLevel += 10; break
+                    case DORMIR: nuevoEstado = 'Dormido'; break
+                    case CURAR: lifeLevel += 10; break
+                }
+            } else if (hasEaten() && !hasBadTemp(temperatura) && !hasBadHumidity(humedad)) {
                 nuevoEstado = 'Feliz';
-                nivelVida += 20;
+                lifeLevel += 20;
+            } else if (hasHotTemp(temperatura)) {
+                nuevoEstado = 'Caluroso';
+                lifeLevel -= 10;
             } else if (hasEaten() && (hasBadTemp(temperatura) || hasBadHumidity(humedad))) {
                 nuevoEstado = 'Activo';
-                nivelVida += 10;
+                lifeLevel += 10;
             } else if (hasBadTemp(temperatura) || hasBadHumidity(humedad)) {
                 nuevoEstado = 'Enfermo';
-                nivelVida -= 10;
+                lifeLevel -= 10;
             }
             break;
         case 'Enfermo':
-            if (!hasBadTemp(temperatura) && !hasBadHumidity(humedad)) {
+            if (isAction) {
+                switch(action) {
+                    case ALIMENTAR: nuevoEstado = 'Feliz'; lifeLevel += 10; break
+                    case DORMIR: nuevoEstado = 'Dormido'; break
+                    case CURAR: nuevoEstado = 'Activo'; lifeLevel += 10; break
+                }
+            } else if (hasBadTemp(temperatura) || hasBadHumidity(humedad)) {
+                lifeLevel -= 10;
+            } else if (!hasBadTemp(temperatura) && !hasBadHumidity(humedad)) {
                 nuevoEstado = 'Activo';
-                nivelVida += 10;
+                lifeLevel += 10;
             }
+            break;
+        case 'Dormido':
+            if (isAction) {
+                switch(action) {
+                    case ALIMENTAR: nuevoEstado = 'Activo'; lifeLevel += 10; break
+                    case CURAR: nuevoEstado = 'Activo'; lifeLevel += 10; break
+                }
+            } else if (!hasEaten() || hasHotTemp(temperatura)) {
+                nuevoEstado = 'Activo';
+            } else if (hasBadTemp(temperatura) || hasBadHumidity(humedad)) {
+                nuevoEstado = 'Activo';
+            } else if (!hasBadTemp(temperatura) && !hasBadHumidity(humedad) && esDia) {
+                nuevoEstado = 'Activo';
+            }
+            break;
+        case 'Caluroso':
+            if (isAction) {
+                switch(action) {
+                    case ALIMENTAR: lifeLevel += 10; break
+                    case CURAR: lifeLevel += 10; break
+                    case VENTILAR: nuevoEstado = 'Activo'; lifeLevel += 10; break
+                }
+            } else if (!hasHotTemp()) {
+                nuevoEstado = 'Activo';
+                lifeLevel += 10;
+            } else if (!hasEaten()) {
+                nuevoEstado = 'Enfermo';
+                lifeLevel -= 10;
+            } else if (hasBadTemp(temperatura) || hasBadHumidity(humedad)) {
+                nuevoEstado = 'Enfermo';
+                lifeLevel -= 10;
+            }
+
+            break;
+            case 'Muerto':
+                if (isAction && action === REVIVIR) {
+                    nuevoEstado = ESTADO_ACTIVO;
+                    lifeLevel = 100; //TODO: ajustar valores de vida, temperatura, humedad, ldr que se consideren optimos
+                    temperatura = 4;
+                    humedad = 40;
+                    ldr = 650;
+                } 
+    
             break;
     }
 
-    if (nivelVida <= 0) {
-        killPet(); // TODO: completar
+    if (lifeLevel <= 0) {
+        nuevoEstado = 'Muerto';
     } else {
-        nivelVida = Math.max(0, Math.min(100, nivelVida));
+        lifeLevel = Math.max(0, Math.min(100, lifeLevel));
     }
 
-    if (nuevoEstado !== estado || estadoPingüino.nivelVida !== nivelVida) {
-        estadoPingüino.estado = nuevoEstado;
-        estadoPingüino.nivelVida = nivelVida;
-        await estadoPingüino.save();
+    if (nuevoEstado !== lastKnownStatus || estadoPingüino.nivelVida !== lifeLevel) {
+
+      const newEstado = new Estados({
+          temperature: temperatura,
+          humidity: humedad,
+          ldr: ldr,
+          estado: nuevoEstado,
+          readTime: '10:00 AM', //TODO: que ponemos aca?
+          ventilador: false, //TODO: actualizar segun corresponda
+          nivelVida: lifeLevel
+      });
+    
+      await newEstado.save()
+
+      console.log('New Status:', newEstado);
     }
 
-    return { estado: nuevoEstado, nivelvida: nivelVida };
+    return { estado: nuevoEstado, nivelVida: lifeLevel, prenderVentilador: action === VENTILAR ? 1 : 0, apagarVentilador: action === APAGAR_VENTILADOR ? 1 : 0 };
 };
 
 const procesarMensaje = async (msgString) => {
@@ -166,41 +319,11 @@ const procesarMensaje = async (msgString) => {
             return;
         }
 
-        const { estado, nivelvida } = await determinarEstado(temperature, humidity, ldr, nivelVida); // Llama a determinarEstado y espera su resultado
-
-        const estadoFinalId = estadosId[estado];
-        console.log('Id del estado:', estadoFinalId);
-        console.log(`El estado es: ${estado}`); // Agregado uso de comillas invertidas
-
-        let ventilador = false;
-        let ventiladorId = 0;
-        if (estado === 'calor' || estado === 'extremadamente caluroso') {
-            ventilador = true;
-            ventiladorId = 1;
-        }
-        console.log('Ventilador:', ventilador);
-        
-        client.publish('estado', `El estado es: ${estado}`); // Agregado uso de comillas invertidas
-
-        // Almacenar en la base de datos
-        const nuevosEstados = new Estados({ temperature, humidity, ldr, estado, ventilador, readTime, nivelVida });
+        const estadoObject = await determinarEstado(temperature, humidity, ldr, nivelVida); // Llama a determinarEstado y espera su resultado
+        console.log('Estado obtenido:', estadoObject.estado); // Imprimir el estado para verificar
 
         try {
-            await nuevosEstados.save();
-            console.log('Datos guardados en la base de datos:', nuevosEstados);
-
-            const estadosMQTT = { estadoFinalId, estado, ventilador, ventiladorId, nivelVida };
-
-            // Publicar en MQTT
-            client.publish('test25', JSON.stringify(estadosMQTT));
-            console.log("Datos enviados a MQTT", estadosMQTT);
-
-            // *Enviar datos por WebSocket*
-            broadcast({ nuevosEstados });
-
-            console.log("Datos enviados a través de WebSocket");
-            console.log(nuevosEstados);
-
+            resendToMQTTandWS(estadoObject, 'test24')
         } catch (error) {
             console.error('Error al almacenar la temperatura en la base de datos:', error);
         }
