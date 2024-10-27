@@ -138,6 +138,12 @@ const determinarEstado = async (temperatura, humedad, ldr, nivelVida, isAction, 
     let lifeLevel = estadoPingüino._doc.nivelVida;
     let nuevoEstado = lastKnownStatus;
 
+    if (isAction) {
+        temperatura = estadoPingüino._doc.temperature;
+        humedad = estadoPingüino._doc.humidity;
+        ldr = estadoPingüino._doc.ldr;
+    }
+
     const esDia = ldr < ldrThreshold; // Asegúrate de que ldrThreshold esté definido
 
     switch(lastKnownStatus) {
