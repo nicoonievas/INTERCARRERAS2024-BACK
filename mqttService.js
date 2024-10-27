@@ -310,7 +310,7 @@ const determinarEstado = async (temperatura, humedad, ldr, nivelVida, isAction, 
           nivelVida: lifeLevel
       });
     
-      newEstado.save()
+      await newEstado.save()
 
       console.log('New Status:', newEstado);
 
