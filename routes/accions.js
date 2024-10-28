@@ -5,6 +5,7 @@ import { handleSleep } from '../mqttService.js';
 import { handleHeal } from '../mqttService.js';
 import { handleVent } from '../mqttService.js';
 import { handleRevive } from '../mqttService.js';
+import Estados from '../estadosModel.js';
 
 router.post('/feed', (req, res) => {
 
@@ -41,6 +42,15 @@ router.post('/revive', (req, res) => {
     res.status(200).json({ message: 'Revivir acción recibida', data: req.body });
 
     handleRevive();
+});
+
+router.get('/records', async (req, res) => {
+    try {
+        const estados = await Estados.find();
+        res.status(200).json(estados); 
+    } catch (error) {
+        res.status(500).json({ message: 'Error al obtener los estados', error });
+    }
 });
 
 export default router;
