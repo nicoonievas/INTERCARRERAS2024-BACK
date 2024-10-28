@@ -4,11 +4,11 @@ import Estados from './estadosModel.js';
 
 // Umbrales de temperatura
 const coldtemp = -3;    
-const idealtemp = 0;    
+const idealtemp = 0; //TODO: no se usa este valor
 const hottemp = 5;      
-const extremeHotTemp = 10;  
+const extremeHotTemp = 10; //TODO: no se usa este valor 
 const humidityLow = 30;  
-const humidityIdeal = 60;
+const humidityIdeal = 60; //TODO: no se usa este valor
 const humidityHigh = 80;  
 const VENTILAR = 'ventilar';
 const ALIMENTAR = 'alimentar';
@@ -80,7 +80,7 @@ export const handleVent = async (data) => {
 
 export const handleRevive = async () => {
     const estadoObject = await determinarEstado('', '', '', '', true, REVIVIR)
-    resendToMQTTandWS({estadoObject}, 'test24')
+    resendToMQTTandWS(estadoObject, 'test24')
 };
 
 function hasBadTemp(temperature) { // tiene temperatura mala
@@ -125,7 +125,7 @@ async function findLastPenguinStatus() {
     }
 }
 
-const determinarEstado = async (temperatura, humedad, ldr, time,  nivelVida, isAction, action) => {
+const determinarEstado = async (temperatura, humedad, ldr, nivelVida, isAction, action) => {
     const ldrThreshold = 650; //TODO: ajustar este valor
     const estadoPingüino = await findLastPenguinStatus();
     
@@ -305,8 +305,8 @@ const determinarEstado = async (temperatura, humedad, ldr, time,  nivelVida, isA
           humidity: humedad,
           ldr: ldr,
           estado: nuevoEstado,
-          readTime: time,
-          ventilador: false, //TODO: actualizar segun corresponda
+          readTime: "NO SE USA - USAR CAMPO fecha",
+          ventilador: false,
           nivelVida: lifeLevel
       });
     
@@ -330,7 +330,7 @@ const procesarMensaje = async (msgString) => {
         const temperature = parseFloat(data.temperature);
         const humidity = parseFloat(data.humidity);
         const ldr = parseFloat(data.ldr);
-        const readTime = data.time;
+        const readTime = data.time; //TODO: no lo usamos, tenemos el campo fecha
         let nivelVida = 80; // Asegúrate de que este valor sea un número al principio
 
         if (isNaN(temperature) || isNaN(humidity)) {
@@ -338,7 +338,7 @@ const procesarMensaje = async (msgString) => {
             return;
         }
 
-        const estadoObject = await determinarEstado(temperature, humidity, ldr, readTime,  nivelVida); // Llama a determinarEstado y espera su resultado
+        const estadoObject = await determinarEstado(temperature, humidity, ldr,  nivelVida); // Llama a determinarEstado y espera su resultado
         console.log('Estado obtenido:', estadoObject.estado); // Imprimir el estado para verificar
 
         try {
