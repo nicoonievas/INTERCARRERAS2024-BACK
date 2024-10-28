@@ -3,9 +3,9 @@ import { broadcast } from './webSocketServer.js'; // Importamos broadcast para W
 import Estados from './estadosModel.js';
 
 // Umbrales de temperatura
-const coldtemp = -3;    
+const coldtemp = 20;    
 const idealtemp = 0; //TODO: no se usa este valor
-const hottemp = 5;      
+const hottemp = 35;      
 const extremeHotTemp = 10; //TODO: no se usa este valor 
 const humidityLow = 30;  
 const humidityIdeal = 60; //TODO: no se usa este valor
