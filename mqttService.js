@@ -125,7 +125,7 @@ async function findLastPenguinStatus() {
     }
 }
 
-const determinarEstado = async (temperatura, humedad, ldr, nivelVida, isAction, action) => {
+const determinarEstado = async (temperatura, humedad, ldr, time,  nivelVida, isAction, action) => {
     const ldrThreshold = 650; //TODO: ajustar este valor
     const estadoPingüino = await findLastPenguinStatus();
     
@@ -305,7 +305,7 @@ const determinarEstado = async (temperatura, humedad, ldr, nivelVida, isAction, 
           humidity: humedad,
           ldr: ldr,
           estado: nuevoEstado,
-          readTime: '10:00 AM', //TODO: que ponemos aca?
+          readTime: time,
           ventilador: false, //TODO: actualizar segun corresponda
           nivelVida: lifeLevel
       });
@@ -338,7 +338,7 @@ const procesarMensaje = async (msgString) => {
             return;
         }
 
-        const estadoObject = await determinarEstado(temperature, humidity, ldr, nivelVida); // Llama a determinarEstado y espera su resultado
+        const estadoObject = await determinarEstado(temperature, humidity, ldr, readTime,  nivelVida); // Llama a determinarEstado y espera su resultado
         console.log('Estado obtenido:', estadoObject.estado); // Imprimir el estado para verificar
 
         try {
