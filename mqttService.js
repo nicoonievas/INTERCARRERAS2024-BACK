@@ -83,7 +83,7 @@ export const handleRevive = async () => {
     resendToMQTTandWS(estadoObject, 'test24')
 };
 
-function hasBadTemp(temperature) { // tiene temperatura mala
+function hasBadTemp(temperature) { 
     return (temperature >= hottemp || temperature <= coldtemp);
 }
 
@@ -91,7 +91,7 @@ function hasHotTemp(temperature) {
     return temperature >= hottemp
 }
 
-function hasBadHumidity(humidity) { // tiene humedad mala
+function hasBadHumidity(humidity) { 
     return (humidity >= humidityHigh || humidity <= humidityLow);
 }
 
@@ -126,7 +126,7 @@ async function findLastPenguinStatus() {
 }
 
 const determinarEstado = async (temperatura, humedad, ldr, nivelVida, isAction, action) => {
-    const ldrThreshold = 650; //TODO: ajustar este valor
+    const ldrThreshold = 650; 
     const estadoPingüino = await findLastPenguinStatus();
     
     if (!estadoPingüino) {
@@ -144,7 +144,7 @@ const determinarEstado = async (temperatura, humedad, ldr, nivelVida, isAction, 
         ldr = estadoPingüino._doc.ldr;
     }
 
-    const esDia = ldr < ldrThreshold; // Asegúrate de que ldrThreshold esté definido
+    const esDia = ldr < ldrThreshold; 
 
     switch(lastKnownStatus) {
         case 'Activo':
@@ -281,7 +281,7 @@ const determinarEstado = async (temperatura, humedad, ldr, nivelVida, isAction, 
             case 'Muerto':
                 if (isAction && action === REVIVIR) {
                     nuevoEstado = ESTADO_ACTIVO;
-                    lifeLevel = 100; //TODO: ajustar valores de vida, temperatura, humedad, ldr que se consideren optimos
+                    lifeLevel = 100; 
                     temperatura = 4;
                     humedad = 40;
                     ldr = 650;
@@ -330,16 +330,15 @@ const procesarMensaje = async (msgString) => {
         const temperature = parseFloat(data.temperature);
         const humidity = parseFloat(data.humidity);
         const ldr = parseFloat(data.ldr);
-        const readTime = data.time; //TODO: no lo usamos, tenemos el campo fecha
-        let nivelVida = 80; // Asegúrate de que este valor sea un número al principio
+        const readTime = data.time; 
 
         if (isNaN(temperature) || isNaN(humidity)) {
-            console.error(`Mensaje recibido no es un número válido: '${msgString}'`); // Agregado uso de comillas invertidas
+            console.error(`Mensaje recibido no es un número válido: '${msgString}'`); 
             return;
         }
 
-        const estadoObject = await determinarEstado(temperature, humidity, ldr,  nivelVida); // Llama a determinarEstado y espera su resultado
-        console.log('Estado obtenido:', estadoObject.estado); // Imprimir el estado para verificar
+        const estadoObject = await determinarEstado(temperature, humidity, ldr,  nivelVida); 
+        console.log('Estado obtenido:', estadoObject.estado); 
 
         try {
             resendToMQTTandWS(estadoObject, 'test24')
@@ -347,7 +346,7 @@ const procesarMensaje = async (msgString) => {
             console.error('Error al almacenar la temperatura en la base de datos:', error);
         }
     } catch (error) {
-        console.error(`Error al parsear el mensaje: ${msgString}, ${error}`); // Agregado uso de comillas invertidas
+        console.error(`Error al parsear el mensaje: ${msgString}, ${error}`); 
     }
 };
 
